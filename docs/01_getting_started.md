@@ -365,6 +365,8 @@ Existing migration files are already committed, so a new contributor does not ne
 
 ## 11. Next: build the REST API and track stock movements
 
+Continue with [phase 2 — Build the inventory REST API](02_rest_api.md) for the complete serializers, ViewSets, routing, permissions, and API testing steps.
+
 | Next component | Purpose | Familiar comparison |
 | --- | --- | --- |
 | `inventory/serializers.py` | Validate incoming data and serialize models | Pydantic schemas; Spring request/response DTOs |
