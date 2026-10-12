@@ -1,0 +1,15 @@
+.venv/
+.validation/
+__pycache__/
+*.py[cod]
+db.sqlite3
+db.sqlite3-*
+.env
+.env.*
+!.env.example
+!.env.database.example
+!.env.production.example
+staticfiles/
+backups/
+sqlite-data.json
+reset-sequences.sql

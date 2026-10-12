@@ -262,6 +262,118 @@ Categories have the same actions under `/api/categories/`. Use the actual numeri
 
 ## 6. Check and run the application
 
+### Create login accounts before trying the API
+
+Users are database records, not source-code changes. Apply the existing migrations first:
+
+```sh
+uv run python manage.py migrate
+```
+
+If you do not already have the Phase 1 administrator, create a superuser:
+
+```sh
+uv run python manage.py createsuperuser --username inventory_admin
+```
+
+Enter an email (optional with Django's default user model) and a password when prompted. A superuser has `is_active=True`, `is_staff=True`, and `is_superuser=True` and can manage users in Admin. If that username already exists, reuse it rather than creating it again. Reset a forgotten password with `uv run python manage.py changepassword inventory_admin`.
+
+Create a separate staff account for the inventory API and a regular user for checking denied access. Start the Django shell:
+
+```sh
+uv run python manage.py shell
+```
+
+Paste the following into the Django shell. Choose unused usernames and strong local passwords. `getpass` prompts without including passwords in the code:
+
+```py
+from getpass import getpass
+from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+User = get_user_model()
+staff = User(username="inventory_staff", is_active=True, is_staff=True, is_superuser=False)
+password = getpass("New staff password: ")
+validate_password(password, user=staff)
+staff.set_password(password)
+staff.save()
+regular = User(username="inventory_reader", is_active=True, is_staff=False, is_superuser=False)
+password = getpass("New regular-user password: ")
+validate_password(password, user=regular)
+regular.set_password(password)
+regular.save()
+list(User.objects.filter(username__in=["inventory_staff", "inventory_reader"]).values("username", "is_active", "is_staff", "is_superuser"))
+exit()
+```
+
+If password validation raises an error, enter a new password and repeat `validate_password` before continuing. `set_password` hashes the password; never assign a raw password to `user.password`. Run account creation once; if a username exists, reuse it or choose another. Expect both accounts active, only `inventory_staff` marked staff, and neither marked superuser.
+
+Alternatively, after starting the server below, sign into `/admin/` as `inventory_admin`, open **Users → Add**, enter the username/password, then edit the saved user's permissions. Set **Active** and **Staff status** for the staff account; keep **Superuser status** unchecked. A regular user has only **Active** checked. Staff status grants this phase's API access; it does not grant all Django Admin model permissions.
+
+### List existing users
+
+Before creating another account or choosing a username for later commands, list the users in the currently configured database:
+
+```sh
+uv run python manage.py shell
+```
+
+Paste the following into the Django shell:
+
+```py
+from django.contrib.auth import get_user_model
+User = get_user_model()
+list(User.objects.order_by("username").values("id", "username", "is_active", "is_staff", "is_superuser"))
+list(User.objects.filter(is_active=True, is_staff=True).order_by("username").values("id", "username"))
+exit()
+```
+
+The first query lists all accounts and their permission flags. The second lists active staff users, including superusers, suitable for this phase's API and Phase 3's opening reconciliation. An empty list means there are no matching users in this database. These queries do not display passwords or password hashes.
+
+Once the server is running, you can also sign into `/admin/` as a superuser and open **Users** to browse, search, and filter accounts.
+
+### Delete or deactivate a user
+
+For an unused local account, start `uv run python manage.py shell` and look up the exact username before deleting it. Replace `inventory_reader` with the account you intend to remove:
+
+```py
+from django.contrib.auth import get_user_model
+User = get_user_model()
+user = User.objects.get(username="inventory_reader")
+print(user.pk, user.username, user.is_active, user.is_staff, user.is_superuser)
+```
+
+Check the printed identity. Only after confirming it is the intended account, run:
+
+```py
+user.delete()
+print(User.objects.filter(username="inventory_reader").exists())
+exit()
+```
+
+Expect `False` from the existence check. Deletion is permanent and may delete related records through cascading relationships; review those relationships before deleting users with application data. Do not delete your only administrator. A missing username raises `User.DoesNotExist`; use the user-list steps above to choose an existing account.
+
+From Phase 3 onward, stock transactions reference their actor with `on_delete=PROTECT`. Deleting a user with recorded movements raises `ProtectedError`, preserving the audit history. Deactivate that user instead, keeping their identity attached to past movements:
+
+```sh
+uv run python manage.py shell
+```
+
+```py
+from django.contrib.auth import get_user_model
+User = get_user_model()
+user = User.objects.get(username="inventory_reader")
+user.is_active = False
+user.save(update_fields=["is_active"])
+print(user.username, user.is_active)
+exit()
+```
+
+Use the actual username and expect `False` for active status. With the tutorial's authentication configuration, an inactive user cannot authenticate; deactivation does not erase their history. It also leaves their staff/superuser flags unchanged if you later reactivate them.
+
+Alternatively, sign into `/admin/` as a superuser, open **Users**, and select the exact account. Use **Delete** and review Django's related-object confirmation page before confirming. To deactivate, uncheck **Active** and save. If protected stock movements block deletion, use deactivation rather than removing the movements.
+
+### Start the server and verify access
+
 ```sh
 uv run python manage.py check
 uv run python manage.py makemigrations --check --dry-run
@@ -280,7 +392,7 @@ Keep the server running. In another terminal at the repository root, run:
 uv run python
 ```
 
-Paste this helper into the Python prompt. It uses only the standard library, so the same example works in PowerShell, Bash, and Zsh. Enter your superuser username and password when prompted; the password is not included in the code or saved to a file.
+Paste this helper into the Python prompt. It uses only the standard library, so the same example works in PowerShell, Bash, and Zsh. Enter `inventory_staff` (or your chosen active staff/superuser account) and its password when prompted; the password is not included in the code or saved to a file. To verify permissions afterward, restart the helper with `inventory_reader` and request the product list: expect `403`, while the staff account receives `200`.
 
 ```python
 import base64
@@ -485,7 +597,7 @@ This diagram shows only files relevant to phase 2; keep the rest of phase 1's st
 
 Phase 3 will add stock receipts and withdrawals with an auditable movement history:
 
-1. Define `StockTransaction` with a product, signed quantity change, reason, timestamp, and actor.
+1. Define `StockTransaction` with a product, typed operation, positive whole-unit quantity, notes/reference, timestamp, and actor; the type determines stock direction.
 2. Record opening balances for existing products so history agrees with current stock.
 3. Put stock updates and movement creation in a single database transaction; prevent negative balances and handle concurrent requests for the chosen database.
 4. Expose a controlled movement endpoint instead of generic edits to transaction history.

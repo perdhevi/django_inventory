@@ -1,8 +1,8 @@
 # Implementation roadmap
 
-Phases 1 and 2 are existing code tutorials. Phases 3–8 are detailed implementation plans; they are not complete copy-paste code tutorials yet. Follow the numbered guide for each phase. Do not infer feature completion from documentation availability.
+Phases 1–8 follow a learning sequence: understand the request flow, change named files, apply migrations/dependencies where needed, try the feature, run focused checks/tests, and review the changed files. Phases 3–8 now include code walkthroughs rather than requirements-only plans.
 
-Phase 1 and Phase 2 documentation already exists. The milestones below preserve those guides and extend them; documentation availability is not proof of completed implementation.
+Apply each tutorial in order. Later phases extend earlier services, serializers, permissions, and routes; instructions to append/replace code matter. The tutorial settings package is `config`; this checkout uses `django_inventory`, as explained at the start of Phase 3. Documentation availability is not proof of implemented or verified features. PostgreSQL locking, real Google callbacks, HTTPS deployment, and restore rehearsals require the corresponding environment.
 
 ### Phase 1 — Existing foundation and Admin
 

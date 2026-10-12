@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.conf import settings
 
 
 class Category(models.Model):
@@ -32,6 +33,22 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    average_unit_cost = models.DecimalField(max_digits=24, decimal_places=6, default=0)
+    inventory_value = models.DecimalField(max_digits=24, decimal_places=6, default=0)
+
+    def save(self, *args, **kwargs):
+        # An ordinary metadata save must not overwrite balances read before another posting.
+        # The posting service supplies explicit update_fields for its balance writes.
+        if not self._state.adding and kwargs.get("update_fields") is None:
+            balances = {"stock_quantity", "average_unit_cost", "inventory_value"}
+            kwargs["update_fields"] = [
+                field.name for field in self._meta.concrete_fields
+                if not field.primary_key and field.name not in balances
+            ]
+        return super().save(*args, **kwargs)
+
     class Meta:
         ordering = ["name", "id"]
         constraints = [
@@ -43,3 +60,37 @@ class Product(models.Model):
 
     def __str__(self):
         return f"{self.sku} — {self.name}"
+
+
+class StockTransaction(models.Model):
+    class Type(models.TextChoices):
+        PROCUREMENT = "PROCUREMENT", "Procurement"
+        SALE = "SALE", "Sale"
+        OPENING_BALANCE = "OPENING_BALANCE", "Opening balance"
+        ADJUSTMENT_IN = "ADJUSTMENT_IN", "Adjustment in"
+        ADJUSTMENT_OUT = "ADJUSTMENT_OUT", "Adjustment out"
+
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="movements")
+    transaction_type = models.CharField(max_length=20, choices=Type.choices)
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    unit_cost = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    selling_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    value_change = models.DecimalField(max_digits=24, decimal_places=6)
+    cogs = models.DecimalField(max_digits=24, decimal_places=6, default=0)
+    revenue = models.DecimalField(max_digits=24, decimal_places=6, default=0)
+    gross_profit = models.DecimalField(max_digits=24, decimal_places=6, default=0)
+    reference = models.CharField(max_length=100, blank=True)
+    notes = models.TextField(blank=True)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+    request_key = models.UUIDField(unique=True)
+    request_data = models.JSONField(editable=False)
+    corrects = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="corrections"
+    )
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(quantity__gt=0), name="movement_quantity_positive"),
+        ]

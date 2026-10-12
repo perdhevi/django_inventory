@@ -21,7 +21,11 @@ Follow [Phase 1 — Getting started](docs/01_getting_started.md). Continue throu
 | 7 | Optional Google sign-in, safe account linking, existing role enforcement | [Google authentication](docs/07_google_authentication.md) |
 | 8 | Production configuration, deployment, CI, monitoring, backup/restore | [Deployment](docs/08_deployment.md) |
 
-Each phase guide contains its prerequisites, build sequence, checks, and completion criteria. We will validate the implementation step by step as we work through each guide.
+Each guide follows the same learning flow: prerequisites and request flow, concrete file changes, commands/migrations, manual examples with expected results, tests, and a changed-file review. Apply them in order; later phases extend earlier code. Tutorial availability does not mean the feature is implemented or verified in this checkout.
+
+The tutorials call the Django settings package `config`. This checkout uses `django_inventory`: substitute that name in settings/URL paths, settings-module values, and WSGI targets. Phase 3 explains this convention and begins the stock/valuation walkthrough.
+
+[Actual tutorial build validation](docs/VALIDATION.md) records the PostgreSQL test results, HTTPS/container rehearsal, fixes found, backup/restore comparison, and repeatable local commands. The validated build is isolated from this checkout's application source.
 
 ## Stack and interfaces
 
@@ -71,7 +75,7 @@ django_inventory/
 ├── pyproject.toml
 ├── uv.lock
 ├── manage.py
-├── config/
+├── django_inventory/        # named config/ in the tutorial examples
 ├── inventory/
 ├── accounts/                 # planned Phase 4
 └── docs/

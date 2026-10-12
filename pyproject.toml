@@ -6,4 +6,5 @@ dependencies = [
     "django>=5.2",
     "djangorestframework>=3.16",
     "djangorestframework-stubs>=3.18.1",
+    "psycopg[binary]>=3.3.6",
 ]

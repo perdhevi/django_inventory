@@ -19,9 +19,6 @@
     <orderEntry type="jdk" jdkName="~\PycharmProjects\django_inventory\.venv" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
-  <component name="PackageRequirementsSettings" />
-  <component name="PyDocumentationSettings" />
-  <component name="ReSTService" />
   <component name="TemplatesService">
     <option name="TEMPLATE_CONFIGURATION" value="Django" />
     <option name="TEMPLATE_FOLDERS">
@@ -30,5 +27,4 @@
       </list>
     </option>
   </component>
-  <component name="TestRunnerService" />
 </module>

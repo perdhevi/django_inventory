@@ -1,10 +1,16 @@
 from django.db.models.deletion import ProtectedError
 from rest_framework import status, viewsets
-from rest_framework.exceptions import APIException
+from rest_framework.exceptions import APIException,ValidationError
+from django.conf import settings
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Sum
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from .models import Category, Product
+from .models import Category, Product, StockTransaction
 from .serializers import CategorySerializer, ProductSerializer
-
+from .serializers import StockOperationSerializer, StockTransactionSerializer
+from .services import post_stock
 
 class CategoryInUse(APIException):
     status_code = status.HTTP_409_CONFLICT
@@ -26,3 +32,37 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.select_related("category").all()
     serializer_class = ProductSerializer
+
+    def perform_destroy(self, instance):
+        try:
+            instance.delete()
+        except ProtectedError as exc:
+            error = APIException("Products with movements must be deactivated.")
+            error.status_code = 409
+            raise error from exc
+
+
+class StockTransactionViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = StockTransaction.objects.select_related("product", "actor").all()
+    serializer_class = StockTransactionSerializer
+
+    def create(self, request):
+        incoming = StockOperationSerializer(data=request.data)
+        incoming.is_valid(raise_exception=True)
+        data = dict(incoming.validated_data)
+        data["product_id"] = data.pop("product").pk
+        try:
+            movement, created = post_stock(actor=request.user, **data)
+        except DjangoValidationError as exc:
+            raise ValidationError(exc.messages) from exc
+        return Response(self.get_serializer(movement).data, status=201 if created else 200)
+
+
+class ValuationView(APIView):
+    def get(self, request):
+        totals = StockTransaction.objects.filter(transaction_type="SALE").aggregate(
+            revenue=Sum("revenue"), cogs=Sum("cogs"), gross_profit=Sum("gross_profit")
+        )
+        totals["inventory_value"] = Product.objects.aggregate(value=Sum("inventory_value"))["value"]
+        return Response({"currency": settings.INVENTORY_CURRENCY,
+                         **{key: format(value or 0, ".6f") for key, value in totals.items()}})

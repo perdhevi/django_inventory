@@ -1,6 +1,6 @@
 # Architecture and application scope
 
-This document records the agreed design. It describes planned behavior, not verified implementation.
+This document records the agreed design. Phases 1–8 provide follow-along code tutorials for applying it; neither the design nor tutorial availability establishes verified implementation in this checkout.
 
 ## Familiar concepts
 
@@ -83,7 +83,7 @@ Phase 1 permits direct introductory stock entry. Phase 2 makes stock read-only i
 
 The shared service will authenticate/authorize the operation, validate inputs, lock the product in PostgreSQL, and record the transaction plus stock/cost changes inside `transaction.atomic()`. Reject insufficient stock, protect against concurrent sales, and handle duplicate submissions. Failed operations must roll back all changes.
 
-Posted history is immutable. Corrections and future returns/cancellations create linked compensating movements. Protect products with history from deletion and use deactivation. Reconcile existing Phase 1 balances through opening-balance records before enabling transaction-only stock updates.
+Posted history cannot be edited/deleted through the tutorial API or Admin. Inventory corrections use adjustments linked to the original movement; they do not cancel sale revenue. Full returns/cancellations with financial reversals are a later extension. Protect products with history from deletion and use deactivation. Reconcile existing Phase 1 balances through opening-balance records before enabling transaction-only stock updates. Trusted shell/SQL access must follow the same service convention.
 
 ### Inventory valuation — included in Phase 3
 
@@ -128,7 +128,7 @@ Phase 4 uses Django groups plus built-in/custom permissions. A user may belong t
 
 *Viewer movement history exposes quantities, types, references, and dates, while excluding acquisition costs, revenue, valuation, and profit. Sales sees sales history without COGS/profit. Procurement sees procurement acquisition costs, without sales revenue or overall valuation. Export requires the relevant report permission and uses the same field restrictions.
 
-Proposed custom permissions include `record_sale`, `receive_procurement`, `adjust_stock`, `record_opening_balance`, `view_sales_report`, `view_procurement_report`, and `view_inventory_valuation`. Enforce permissions in web views, API handlers, and shared stock operations. Hiding buttons alone is insufficient. Until Phase 4, Phase 3 follows the existing staff-only API access policy.
+Phase 4's tutorial creates `record_sale`, `receive_procurement`, `adjust_stock`, `record_opening_balance`, `view_all_movements`, `view_sales_report`, `view_procurement_report`, `view_inventory_valuation`, and `export_reports`. Enforce permissions in web views, API handlers, and shared stock operations. Hiding buttons alone is insufficient. Until Phase 4, Phase 3 follows the existing staff-only API access policy. Role assignment remains a trusted superuser Admin workflow; a generic role-editing API is not exposed.
 
 ## Development conventions
 
