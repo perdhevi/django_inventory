@@ -1,6 +1,6 @@
 # Architecture and application scope
 
-This document records the agreed design. Phases 1–8 provide follow-along code tutorials for applying it; neither the design nor tutorial availability establishes verified implementation in this checkout.
+This document records the agreed design. Core phases 1–7 provide follow-along code tutorials for applying it; neither the design nor tutorial availability establishes verified implementation in this checkout.
 
 ## Familiar concepts
 
@@ -47,7 +47,7 @@ Phase 1 retains SQLite. Phase 3 adds PostgreSQL, a configured database/user, env
 
 Phase 4 adds Simple JWT (`uv add djangorestframework-simplejwt`), short-lived access tokens, refresh rotation, and refresh-token blacklisting. Revoking a refresh token does not normally invalidate an already issued access token before its expiry. API clients send `Authorization: Bearer <access_token>`.
 
-Phase 7 adds django-allauth with configurable Google sign-in. Local password login and Google sign-in resolve to the same local user, roles, and permissions. Google establishes identity; our application grants access and issues its own session or JWT. Use authenticated account linking rather than automatically merging matching email addresses. Access remains invite-only or administrator-approved.
+The optional [Google sign-in integration](integrations/google_authentication.md) adds django-allauth outside the core feature path. Local login, users, roles, permissions, sessions, and application JWT remain core features; deployment does not require an external identity provider. Local password login and Google sign-in resolve to the same local user, roles, and permissions. Google establishes identity; our application grants access and issues its own session or JWT. Use authenticated account linking rather than automatically merging matching email addresses. Access remains invite-only or administrator-approved.
 
 An `accounts` app can organize these features without replacing the existing user model. A custom-user migration requires a separate plan if it becomes necessary; it is not a prerequisite for roles or Google login.
 

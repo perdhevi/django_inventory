@@ -90,7 +90,7 @@ CREATE DATABASE inventory OWNER inventory_app;
 ALTER ROLE inventory_app CREATEDB;
 ```
 
-`\password` prompts for a password. `CREATEDB` enables Django's local test database; Phase 8 separates the production role.
+`\password` prompts for a password. `CREATEDB` enables Django's local test database; Phase 7 separates the production role.
 
 Add `import os` to `config/settings.py`; replace `DATABASES` and add currency:
 
@@ -160,7 +160,7 @@ uv run python manage.py check
 uv run python manage.py test inventory
 ```
 
-Expected: Django reports no issues and the six Phase 2 tests pass. Keep this database container and terminal connection variables for Phases 4–7. Phase 8 adds the application and Caddy containers and explains the transition to a separate rehearsal database.
+Expected: Django reports no issues and the six Phase 2 tests pass. Keep this database container and terminal connection variables for Phases 4–6. Phase 7 adds the application and Caddy containers and explains the transition to a separate rehearsal database.
 
 ## 3. Extend the models and migrate
 
@@ -668,7 +668,7 @@ After the checks pass, run:
 uv run python manage.py runserver 127.0.0.1:8000
 ```
 
-Expect `Starting development server at http://127.0.0.1:8000/`. Leave this terminal running; it displays request logs and errors as you try the API. `Ctrl+C` stops the server. This is the local development server; the production container and HTTPS proxy come in Phase 8.
+Expect `Starting development server at http://127.0.0.1:8000/`. Leave this terminal running; it displays request logs and errors as you try the API. `Ctrl+C` stops the server. This is the local development server; the production container and HTTPS proxy come in Phase 7.
 
 Open [the browsable API](http://127.0.0.1:8000/api/) in your browser. Sign in using **Log in** with your active staff account, or use your existing Admin session. You should see the category, product, and stock-transaction routes. Visit [valuation](http://127.0.0.1:8000/api/valuation/) separately; it is a manually registered route and may not appear in the router's API root. An unauthenticated request can return `401`; that is an access check, not evidence the server failed to start.
 

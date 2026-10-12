@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-Phases 1–8 follow a learning sequence: understand the request flow, change named files, apply migrations/dependencies where needed, try the feature, run focused checks/tests, and review the changed files. Phases 3–8 now include code walkthroughs rather than requirements-only plans.
+Core phases 1–7 follow a learning sequence: understand the request flow, change named files, apply migrations/dependencies where needed, try the feature, run focused checks/tests, and review the changed files. Phases 3–7 now include code walkthroughs rather than requirements-only plans.
 
 Apply each tutorial in order. Later phases extend earlier services, serializers, permissions, and routes; instructions to append/replace code matter. The tutorial settings package is `config`; this checkout uses `django_inventory`, as explained at the start of Phase 3. Documentation availability is not proof of implemented or verified features. PostgreSQL locking, real Google callbacks, HTTPS deployment, and restore rehearsals require the corresponding environment.
 
@@ -64,7 +64,17 @@ Apply each tutorial in order. Later phases extend earlier services, serializers,
 
 **Completion:** operational reports match recorded movements and expose only authorized fields.
 
-### Phase 7 — Google sign-in
+### Phase 7 — Deployment readiness
+
+- Production secrets/settings, HTTPS, static files, PostgreSQL deployment.
+- CI checks, logging, health checks, backup and tested restore procedures.
+- Reproducible deployment/migrations and accurate implementation documentation.
+
+**Completion:** the application can be deployed, monitored, backed up, and restored. Tests and configuration hygiene accompany all phases; CI should begin earlier when practical.
+
+### Optional external integration — Google sign-in
+
+Follow [Google authentication](integrations/google_authentication.md) after Phase 6. This integration is not required for core deployment.
 
 - django-allauth Google provider, per-environment credentials/callbacks, feature configuration.
 - Explicit account linking, local login retention, invite/approval enforcement.
@@ -72,14 +82,6 @@ Apply each tutorial in order. Later phases extend earlier services, serializers,
 - Tests covering disabled users, account linking, and unchanged role enforcement.
 
 **Completion:** approved users can choose password or Google login with the same permissions.
-
-### Phase 8 — Deployment readiness
-
-- Production secrets/settings, HTTPS, static files, PostgreSQL deployment.
-- CI checks, logging, health checks, backup and tested restore procedures.
-- Reproducible deployment/migrations and accurate implementation documentation.
-
-**Completion:** the application can be deployed, monitored, backed up, and restored. Tests and configuration hygiene accompany all phases; CI should begin earlier when practical.
 
 ### Later expansion
 

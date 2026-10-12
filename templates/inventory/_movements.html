@@ -1,0 +1,8 @@
+<div class="cards">
+{% for row in rows %}
+<article>
+  <a href="{% url 'web-movement-detail' row.id %}">Movement {{ row.id }}</a>
+  <dl>{% for field, value in row.items %}<dt>{{ field }}</dt><dd>{{ value|default_if_none:'—' }}</dd>{% endfor %}</dl>
+</article>
+{% empty %}<p>No movements to show.</p>{% endfor %}
+</div>

@@ -72,6 +72,12 @@ TEMPLATES = [
         },
     },
 ]
+# These settings are outside the TEMPLATES block.
+STATIC_URL = "static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "dashboard"
+LOGOUT_REDIRECT_URL = "login"
 
 WSGI_APPLICATION = 'django_inventory.wsgi.application'
 

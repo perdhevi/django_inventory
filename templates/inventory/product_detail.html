@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block content %}<h1>{{ product.name }}</h1>
+<p>{{ product.sku }} · {{ product.category }} · Stock: {{ product.stock_quantity }}</p>
+<p>{{ product.description }}</p><p>Selling price: {{ product.price }}</p>
+{% if perms.inventory.view_inventory_valuation %}
+  <p>Average cost: {{ product.average_unit_cost }} · Inventory value: {{ product.inventory_value }}</p>
+{% endif %}
+{% if perms.inventory.change_product %}<a href="{% url 'web-product-edit' product.pk %}">Edit or deactivate</a>{% endif %}
+<h2>Recent authorized history</h2>{% include 'inventory/_movements.html' %}
+{% endblock %}

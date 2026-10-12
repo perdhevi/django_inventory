@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% block content %}<h1>Categories</h1>
+{% if perms.inventory.add_category %}<a href="{% url 'web-category-create' %}">Add category</a>{% endif %}
+<ul>{% for category in categories %}<li>{{ category.name }}
+{% if perms.inventory.change_category %}<a href="{% url 'web-category-edit' category.pk %}">Edit</a>{% endif %}
+{% if perms.inventory.delete_category %}<a href="{% url 'web-category-delete' category.pk %}">Delete</a>{% endif %}
+</li>{% empty %}<li>No categories yet.</li>{% endfor %}</ul>
+{% endblock %}

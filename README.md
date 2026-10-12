@@ -6,7 +6,7 @@ The base functional application will manage categories/products, procurement rec
 
 ## Start here
 
-Follow [Phase 1 — Getting started](docs/01_getting_started.md). Continue through the numbered guides in order.
+Follow [Phase 1 — Getting started](docs/01_getting_started.md). Continue through the numbered core guides in order. External integrations are optional and can be added separately.
 
 ## Phases
 
@@ -18,14 +18,17 @@ Follow [Phase 1 — Getting started](docs/01_getting_started.md). Continue throu
 | 4 | Viewer, Sales, Procurement, Inventory manager, Administrator roles; data permissions; JWT | [Accounts and authorization](docs/04_accounts_roles_jwt.md) |
 | 5 | Login/account pages, dashboard, catalog, procurement/sales forms, transaction history | [Web interface](docs/05_web_interface.md) |
 | 6 | Low-stock indicators, filters, pagination, reports, CSV export, API documentation | [Reports and usability](docs/06_reports_usability.md) |
-| 7 | Optional Google sign-in, safe account linking, existing role enforcement | [Google authentication](docs/07_google_authentication.md) |
-| 8 | Production configuration, deployment, CI, monitoring, backup/restore | [Deployment](docs/08_deployment.md) |
+| 7 | Production configuration, deployment, CI, monitoring, backup/restore | [Deployment](docs/07_deployment.md) |
 
 Each guide follows the same learning flow: prerequisites and request flow, concrete file changes, commands/migrations, manual examples with expected results, tests, and a changed-file review. Apply them in order; later phases extend earlier code. Tutorial availability does not mean the feature is implemented or verified in this checkout.
 
 The tutorials call the Django settings package `config`. This checkout uses `django_inventory`: substitute that name in settings/URL paths, settings-module values, and WSGI targets. Phase 3 explains this convention and begins the stock/valuation walkthrough.
 
 [Actual tutorial build validation](docs/VALIDATION.md) records the PostgreSQL test results, HTTPS/container rehearsal, fixes found, backup/restore comparison, and repeatable local commands. The validated build is isolated from this checkout's application source.
+
+## Optional external integrations
+
+[Google sign-in](docs/integrations/google_authentication.md) can be added after Phase 6, independently of core deployment. Local login, users, roles, permissions, sessions, and JWT remain core features.
 
 ## Stack and interfaces
 
@@ -36,7 +39,7 @@ The tutorials call the Django settings package `config`. This checkout uses `dja
 | Database | SQLite in Phase 1/2; PostgreSQL in Phase 3 |
 | User pages | Django templates/forms with session authentication |
 | API authentication | Basic/session in Phase 2; JWT in Phase 4 |
-| Optional identity provider | Google through django-allauth in Phase 7 |
+| Optional identity provider | Google through django-allauth in the optional integration guide |
 | Authorization | Local Django users, groups, and explicit permissions |
 
 ## Core rules
@@ -86,8 +89,9 @@ django_inventory/
     ├── 04_accounts_roles_jwt.md
     ├── 05_web_interface.md
     ├── 06_reports_usability.md
-    ├── 07_google_authentication.md
-    ├── 08_deployment.md
+    ├── 07_deployment.md
+    ├── integrations/
+    │   └── google_authentication.md
     └── ROADMAP.md
 ```
 

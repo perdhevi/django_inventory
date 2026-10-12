@@ -1,0 +1,33 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Inventory{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'inventory.css' %}">
+</head>
+<body>
+<header>
+  <a href="{% url 'dashboard' %}">Inventory</a>
+  {% if user.is_authenticated %}
+    {% if perms.inventory.view_product %}<a href="{% url 'web-products' %}">Products</a>{% endif %}
+    {% if perms.inventory.view_category %}<a href="{% url 'web-categories' %}">Categories</a>{% endif %}
+    <a href="{% url 'web-movements' %}">History</a>
+    {% if perms.inventory.receive_procurement %}<a href="{% url 'web-post' 'PROCUREMENT' %}">Receive goods</a>{% endif %}
+    {% if perms.inventory.record_sale %}<a href="{% url 'web-post' 'SALE' %}">Record sale</a>{% endif %}
+    {% if perms.inventory.record_opening_balance %}<a href="{% url 'web-post' 'OPENING_BALANCE' %}">Opening balance</a>{% endif %}
+    {% if perms.inventory.adjust_stock %}
+      <a href="{% url 'web-post' 'ADJUSTMENT_IN' %}">Adjust in</a>
+      <a href="{% url 'web-post' 'ADJUSTMENT_OUT' %}">Adjust out</a>
+    {% endif %}
+    <a href="{% url 'password_change' %}">Change password</a>
+    <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button>Log out</button></form>
+  {% endif %}
+</header>
+<main>
+  {% for message in messages %}<p role="status">{{ message }}</p>{% endfor %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

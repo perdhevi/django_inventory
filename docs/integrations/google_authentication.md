@@ -1,6 +1,6 @@
-# 07 — Optional Google sign-in and explicit account linking
+# Optional integration — Google sign-in and explicit account linking
 
-Continue from [Phase 6](06_reports_usability.md). You will add Google as another login method for an already-approved local account. Password login, existing users, stock actors, and groups remain intact. A Google email match never silently merges accounts.
+Prerequisite: complete [Phase 6](../06_reports_usability.md). This external integration is optional and is not required for [core deployment](../07_deployment.md). You will add Google as another login method for an already-approved local account. Password login, existing users, stock actors, and groups remain intact. A Google email match never silently merges accounts.
 
 ## 1. Understand the identity flow
 
@@ -288,7 +288,7 @@ uv run python manage.py check
 uv run python manage.py makemigrations --check --dry-run
 ```
 
-These tests verify our approval/session policy; they do not simulate Google's cryptography or validate a real callback. With the configured test OAuth client, verify connect/login, rejected unlinked users, linking conflicts, cancelled consent, invalid callback/state, disabled accounts, and unlinking recovery. Disable `GOOGLE_LOGIN_ENABLED`, restart, and verify password login and existing API JWTs still work. Do not mark this phase complete until the real provider round trip succeeds.
+These tests verify our approval/session policy; they do not simulate Google's cryptography or validate a real callback. With the configured test OAuth client, verify connect/login, rejected unlinked users, linking conflicts, cancelled consent, invalid callback/state, disabled accounts, and unlinking recovery. Disable `GOOGLE_LOGIN_ENABLED`, restart, and verify password login and existing API JWTs still work. Do not mark this integration complete until the real provider round trip succeeds.
 
 ## 8. Review changed files
 
@@ -301,4 +301,4 @@ templates/base.html + registration/login.html
 pyproject.toml + uv.lock
 ```
 
-Commit code and dependency lock, not OAuth credentials. Next: [Phase 8 — Deployment](08_deployment.md).
+Commit code and dependency lock, not OAuth credentials. For deployment, follow [Phase 7 — Deployment](../07_deployment.md). Configure the production HTTPS callback and pass provider credentials separately to the application environment only when enabling this integration.

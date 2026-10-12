@@ -514,4 +514,4 @@ config/settings.py + urls.py            timezone, pagination, schema
 pyproject.toml + uv.lock
 ```
 
-Commit after reports reconcile and role checks pass. Next: [Phase 7 — Optional Google login](07_google_authentication.md).
+Commit after reports reconcile and role checks pass. Next: [Phase 7 — Deployment](07_deployment.md). You can separately add [optional Google sign-in](integrations/google_authentication.md) after this phase.

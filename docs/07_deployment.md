@@ -1,6 +1,6 @@
-# 08 — Package, verify, and deploy the application
+# 07 — Package, verify, and deploy the application
 
-Continue from [Phase 7](07_google_authentication.md), or Phase 6 with Google disabled. You will add production settings, a Linux container, PostgreSQL CI, health checks, and backup/restore instructions. This walkthrough chooses Docker Compose behind an HTTPS reverse proxy. Complete a local/staging rehearsal before publishing a production service.
+Continue from [Phase 6](06_reports_usability.md). Local authentication is sufficient for this core deployment milestone. You will add production settings, a Linux container, PostgreSQL CI, health checks, and backup/restore instructions. This walkthrough chooses Docker Compose behind an HTTPS reverse proxy. Complete a local/staging rehearsal before publishing a production service.
 
 Use the package-name substitution from Phase 3. Commands below use `config.settings_production` and `config.wsgi`; this checkout needs `django_inventory.settings_production` and `django_inventory.wsgi` instead.
 
@@ -87,7 +87,7 @@ LOGGING = {
 }
 ```
 
-Keep development tests on the ordinary settings module. This production module reads the Phase 3 PostgreSQL variables and Phase 7 optional OAuth variables. WhiteNoise serves collected static assets; see [WhiteNoise Django setup](https://whitenoise.readthedocs.io/en/stable/django.html). Review the [Django deployment checklist](https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/) as you configure the actual host/proxy.
+Keep development tests on the ordinary settings module. This production module reads the Phase 3 PostgreSQL variables for the core application. WhiteNoise serves collected static assets; see [WhiteNoise Django setup](https://whitenoise.readthedocs.io/en/stable/django.html). Review the [Django deployment checklist](https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/) as you configure the actual host/proxy.
 
 The SMTP configuration prevents the development console backend from leaking into production settings. Configure and test actual delivery before adding password reset or email notifications; passing `check --deploy` does not prove email delivery.
 
@@ -105,9 +105,6 @@ POSTGRES_USER=inventory_app
 POSTGRES_PASSWORD=REPLACE_WITH_A_DATABASE_SECRET
 POSTGRES_HOST=db
 POSTGRES_PORT=5432
-GOOGLE_LOGIN_ENABLED=false
-# GOOGLE_CLIENT_ID=
-# GOOGLE_CLIENT_SECRET=
 # Set these when enabling email workflows; verify delivery separately.
 # SMTP_HOST=
 # SMTP_PORT=587
@@ -259,7 +256,6 @@ jobs:
       POSTGRES_USER: inventory_app
       POSTGRES_PASSWORD: ci-only-password
       POSTGRES_HOST: 127.0.0.1
-      GOOGLE_LOGIN_ENABLED: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -295,7 +291,6 @@ DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
 DJANGO_CSRF_TRUSTED_ORIGINS=https://localhost:8443
 POSTGRES_HOST=db
 POSTGRES_PORT=5432
-GOOGLE_LOGIN_ENABLED=false
 ```
 
 Keep `DJANGO_SETTINGS_MODULE` set to your production settings package. Create `Caddyfile.local`:
@@ -361,7 +356,7 @@ curl --cacert backups/caddy-local-root.crt https://localhost:8443/health/
 
 Create `backups` first (`New-Item -ItemType Directory -Force backups` in PowerShell, or `mkdir -p backups` in Bash). On Windows use `curl.exe` to avoid the older PowerShell alias. Expect HTTP 200 with `{"status":"ok"}`. This verifies the proxy, production app, and database together without disabling TLS verification.
 
-Open **https://localhost:8443/accounts/login/** and sign in with the superuser you created. Caddy's internal CA is not automatically trusted by your host browser. For a warning-free browser rehearsal, import that public root certificate into your browser/OS trusted roots through its certificate settings and remove it when the rehearsal ends; only trust the CA you created. Keep Caddy's private keys inside its named volume. Check the dashboard and CSS, receive goods, record a sale, and compare history/report totals. Google stays disabled until the separate provider round trip.
+Open **https://localhost:8443/accounts/login/** and sign in with the superuser you created. Caddy's internal CA is not automatically trusted by your host browser. For a warning-free browser rehearsal, import that public root certificate into your browser/OS trusted roots through its certificate settings and remove it when the rehearsal ends; only trust the CA you created. Keep Caddy's private keys inside its named volume. Check the dashboard and CSS, receive goods, record a sale, and compare history/report totals.
 
 Stop the rehearsal with:
 
@@ -383,7 +378,7 @@ inventory.example.com {
 
 Replace the hostname, ensure ports 80/443 reach the proxy, and confirm it overwrites forwarded scheme headers. The loopback-only app port keeps clients from directly spoofing those headers. An HTTP request to the app will redirect to HTTPS by design. For a local HTTPS rehearsal, use a local proxy/certificate and matching allowed hosts/trusted origins; do not disable production protections just to make an HTTP curl succeed.
 
-Check `/health/`, local login, one receipt/sale, protected history, static CSS, schema docs, and role-specific exports. Enable Google only after setting its production HTTPS callback and separate secrets. Rate-limit local/JWT login at the proxy or an application login-throttling layer before public exposure. No reset-email flow is claimed; configure delivery/templates before adding password reset.
+Check `/health/`, local login, one receipt/sale, protected history, static CSS, schema docs, and role-specific exports. If adding [optional Google sign-in](integrations/google_authentication.md), configure its production HTTPS callback and separate secrets, then verify the real provider round trip. Rate-limit local/JWT login at the proxy or an application login-throttling layer before public exposure. No reset-email flow is claimed; configure delivery/templates before adding password reset.
 
 ## 6. Back up and restore into a separate database
 

@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% block content %}<h1>Products</h1>
+{% if perms.inventory.add_product %}<a href="{% url 'web-product-create' %}">Add product</a>{% endif %}
+<div class="cards">{% for product in products %}
+<article><a href="{% url 'web-product-detail' product.pk %}">{{ product.sku }} — {{ product.name }}</a>
+<p>Stock: {{ product.stock_quantity }} · Active: {{ product.is_active|yesno:'Yes,No' }}</p></article>
+{% empty %}<p>No products yet.</p>{% endfor %}</div>
+{% endblock %}
