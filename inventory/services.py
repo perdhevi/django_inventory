@@ -6,16 +6,18 @@ from django.db import IntegrityError, transaction
 
 from .models import Product, StockTransaction
 
+from .access import require_operation
+
 T = StockTransaction.Type
 INBOUND = {T.PROCUREMENT, T.OPENING_BALANCE, T.ADJUSTMENT_IN}
 ADJUSTMENTS = {T.ADJUSTMENT_IN, T.ADJUSTMENT_OUT}
 SIX = Decimal("0.000001")
 
 
-def require_operation(actor, kind):
-    # Phase 4 replaces this body with capability checks.
-    if not actor.is_authenticated or not actor.is_active or not actor.is_staff:
-        raise PermissionDenied("An active staff account is required.")
+# def require_operation(actor, kind):
+#     # Phase 4 replaces this body with capability checks.
+#     if not actor.is_authenticated or not actor.is_active or not actor.is_staff:
+#         raise PermissionDenied("An active staff account is required.")
 
 
 def money(value):

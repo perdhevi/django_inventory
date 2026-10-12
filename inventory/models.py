@@ -94,3 +94,14 @@ class StockTransaction(models.Model):
         constraints = [
             models.CheckConstraint(condition=models.Q(quantity__gt=0), name="movement_quantity_positive"),
         ]
+        permissions = [
+            ("record_sale", "Can record sales"),
+            ("receive_procurement", "Can receive procurement"),
+            ("adjust_stock", "Can adjust stock"),
+            ("record_opening_balance", "Can record opening balances"),
+            ("view_all_movements", "Can view all movement quantities"),
+            ("view_sales_report", "Can view sales revenue"),
+            ("view_procurement_report", "Can view procurement costs"),
+            ("view_inventory_valuation", "Can view valuation and profit"),
+            ("export_reports", "Can export permitted reports"),
+        ]

@@ -19,6 +19,10 @@ from django.test import TransactionTestCase
 from .models import StockTransaction
 from .services import post_stock
 
+from django.contrib.auth.models import Group
+from django.core.management import call_command
+
+
 
 class InventoryAPITests(APITestCase):
     def setUp(self):
@@ -26,6 +30,10 @@ class InventoryAPITests(APITestCase):
         self.staff = User.objects.create_user(
             username="inventory_staff", password="test-only-password", is_staff=True
         )
+
+        call_command("setup_roles", verbosity=0)
+        self.staff.groups.add(Group.objects.get(name="Administrator"))
+
         self.regular_user = User.objects.create_user(
             username="regular_user", password="test-only-password"
         )
@@ -103,7 +111,9 @@ class InventoryAPITests(APITestCase):
 
 class StockPostingTests(TransactionTestCase):
     def setUp(self):
+        call_command("setup_roles", verbosity=0)
         self.actor = get_user_model().objects.create_user(username="poster", is_staff=True)
+        self.actor.groups.add(Group.objects.get(name="Administrator"))
         self.product = Product.objects.create(
             sku="POST-1", name="Posting", category=Category.objects.create(name="Posting"), price="40.00"
         )

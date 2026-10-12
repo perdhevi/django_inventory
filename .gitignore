@@ -13,3 +13,4 @@ staticfiles/
 backups/
 sqlite-data.json
 reset-sequences.sql
+tools

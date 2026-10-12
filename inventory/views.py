@@ -12,6 +12,8 @@ from .serializers import CategorySerializer, ProductSerializer
 from .serializers import StockOperationSerializer, StockTransactionSerializer
 from .services import post_stock
 
+from .access import CatalogPermission, MovementPermission, ValuationPermission, visible_movements
+
 class CategoryInUse(APIException):
     status_code = status.HTTP_409_CONFLICT
     default_detail = "This category still has products. Reassign or delete them first."
@@ -19,6 +21,7 @@ class CategoryInUse(APIException):
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
+    permission_classes = [CatalogPermission]
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
@@ -30,6 +33,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 
 class ProductViewSet(viewsets.ModelViewSet):
+    permission_classes = [CatalogPermission]
     queryset = Product.objects.select_related("category").all()
     serializer_class = ProductSerializer
 
@@ -43,6 +47,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
 
 class StockTransactionViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [MovementPermission]
     queryset = StockTransaction.objects.select_related("product", "actor").all()
     serializer_class = StockTransactionSerializer
 
@@ -57,8 +62,12 @@ class StockTransactionViewSet(viewsets.ReadOnlyModelViewSet):
             raise ValidationError(exc.messages) from exc
         return Response(self.get_serializer(movement).data, status=201 if created else 200)
 
+    def get_queryset(self):
+        return visible_movements(self.request.user)
 
 class ValuationView(APIView):
+    permission_classes = [ValuationPermission]
+
     def get(self, request):
         totals = StockTransaction.objects.filter(transaction_type="SALE").aggregate(
             revenue=Sum("revenue"), cogs=Sum("cogs"), gross_profit=Sum("gross_profit")
