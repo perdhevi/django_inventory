@@ -1,2 +1,21 @@
 {% extends 'base.html' %}
-{% block content %}<h1>Stock history</h1>{% include 'inventory/_movements.html' %}{% endblock %}
+{% block content %}
+    <h1>Stock history</h1>
+    {% if page %}
+    <form method="get">
+      <label for="product">Product ID</label>
+      <input id="product" name="product" type="number" min="1" value="{{ request.GET.product }}">
+      <label for="actor">Actor ID</label>
+      <input id="actor" name="actor" type="number" min="1" value="{{ request.GET.actor }}">
+      <label for="type">Movement type</label>
+      <input id="type" name="type" value="{{ request.GET.type }}" placeholder="SALE or PROCUREMENT">
+      <label for="start">From</label>
+      <input id="start" name="start" type="date" value="{{ request.GET.start }}">
+      <label for="end">Through</label>
+      <input id="end" name="end" type="date" value="{{ request.GET.end }}">
+      <button type="submit">Filter</button>
+    </form>
+    {% endif %}
+    {% include 'inventory/_movements.html' %}
+    {% include 'inventory/_pagination.html' %}
+{% endblock %}

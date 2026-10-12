@@ -1,6 +1,6 @@
 from django.urls import path
 from . import web_views as views
-
+from .report_views import report_page, report_csv
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("products/", views.products, name="web-products"),
@@ -14,4 +14,7 @@ urlpatterns = [
     path("stock/<str:kind>/", views.post_operation, name="web-post"),
     path("movements/", views.movements, name="web-movements"),
     path("movements/<int:pk>/", views.movement_detail, name="web-movement-detail"),
+    path("reports/<str:kind>/", report_page, name="web-report"),
+    path("reports/<str:kind>/csv/", report_csv, name="web-report-csv"),
+
 ]

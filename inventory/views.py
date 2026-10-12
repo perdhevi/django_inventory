@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Sum
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema, OpenApiTypes
+
 
 from .models import Category, Product, StockTransaction
 from .serializers import CategorySerializer, ProductSerializer
@@ -13,6 +15,9 @@ from .serializers import StockOperationSerializer, StockTransactionSerializer
 from .services import post_stock
 
 from .access import CatalogPermission, MovementPermission, ValuationPermission, visible_movements
+from .queries import filter_products, filter_movements
+
+
 
 class CategoryInUse(APIException):
     status_code = status.HTTP_409_CONFLICT
@@ -37,6 +42,11 @@ class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.select_related("category").all()
     serializer_class = ProductSerializer
 
+    def get_queryset(self):
+        try:
+            return filter_products(super().get_queryset(), self.request.query_params)
+        except DjangoValidationError as exc:
+            raise ValidationError(exc.messages) from exc
     def perform_destroy(self, instance):
         try:
             instance.delete()
@@ -51,6 +61,8 @@ class StockTransactionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = StockTransaction.objects.select_related("product", "actor").all()
     serializer_class = StockTransactionSerializer
 
+    @extend_schema(request=StockOperationSerializer,
+                   responses={201: StockTransactionSerializer, 200: StockTransactionSerializer})
     def create(self, request):
         incoming = StockOperationSerializer(data=request.data)
         incoming.is_valid(raise_exception=True)
@@ -62,9 +74,15 @@ class StockTransactionViewSet(viewsets.ReadOnlyModelViewSet):
             raise ValidationError(exc.messages) from exc
         return Response(self.get_serializer(movement).data, status=201 if created else 200)
 
+    # def get_queryset(self):
+    #     return visible_movements(self.request.user)
     def get_queryset(self):
-        return visible_movements(self.request.user)
+        try:
+            return filter_movements(visible_movements(self.request.user), self.request.query_params)
+        except DjangoValidationError as exc:
+            raise ValidationError(exc.messages) from exc
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
 class ValuationView(APIView):
     permission_classes = [ValuationPermission]
 

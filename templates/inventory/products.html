@@ -1,8 +1,25 @@
 {% extends 'base.html' %}
 {% block content %}<h1>Products</h1>
-{% if perms.inventory.add_product %}<a href="{% url 'web-product-create' %}">Add product</a>{% endif %}
-<div class="cards">{% for product in products %}
-<article><a href="{% url 'web-product-detail' product.pk %}">{{ product.sku }} — {{ product.name }}</a>
-<p>Stock: {{ product.stock_quantity }} · Active: {{ product.is_active|yesno:'Yes,No' }}</p></article>
-{% empty %}<p>No products yet.</p>{% endfor %}</div>
+    {% if perms.inventory.add_product %}
+        <a href="{% url 'web-product-create' %}">Add product</a>
+    {% endif %}
+    <form method="get">
+        <label for="q">SKU or name</label><input id="q" name="q" value="{{ request.GET.q }}">
+        <label for="category">Category ID</label><input id="category" name="category" value="{{ request.GET.category }}">
+        <label for="active">Active status</label><select id="active" name="active"><option value="">All</option><option value="true" {% if request.GET.active == 'true' %}selected{% endif %}>Active</option><option value="false" {% if request.GET.active == 'false' %}selected{% endif %}>Inactive</option></select>
+        <label for="low">Stock status</label><select id="low" name="low"><option value="">All</option><option value="true" {% if request.GET.low == 'true' %}selected{% endif %}>Low stock</option><option value="false" {% if request.GET.low == 'false' %}selected{% endif %}>Above reorder level</option></select>
+        <button>Filter</button>
+    </form>
+    <div class="cards">
+        {% for product in products %}
+            <article>
+                <a href="{% url 'web-product-detail' product.pk %}">{{ product.sku }} — {{ product.name }}
+                    {% if product.stock_quantity == 0 %}<p>Out of stock</p>
+                    {% elif product.stock_quantity <= product.reorder_level %}<p>Low stock</p>{% endif %}
+                </a>
+                <p>Stock: {{ product.stock_quantity }} · Active: {{ product.is_active|yesno:'Yes,No' }}</p>
+            </article>
+        {% empty %}<p>No products yet.</p>{% endfor %}
+    </div>
+    {% include 'inventory/_pagination.html' %}
 {% endblock %}

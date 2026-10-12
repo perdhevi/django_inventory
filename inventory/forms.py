@@ -8,7 +8,7 @@ from .models import Category, Product, StockTransaction
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ["sku", "name", "category", "description", "price", "is_active"]
+        fields = ["sku", "name", "category", "description", "price", "is_active", "reorder_level"]
 
 
 class CategoryForm(forms.ModelForm):

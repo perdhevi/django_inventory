@@ -14,6 +14,10 @@
     {% if perms.inventory.view_product %}<a href="{% url 'web-products' %}">Products</a>{% endif %}
     {% if perms.inventory.view_category %}<a href="{% url 'web-categories' %}">Categories</a>{% endif %}
     <a href="{% url 'web-movements' %}">History</a>
+    {% if perms.inventory.view_product %}<a href="{% url 'web-report' 'stock' %}">Stock report</a>{% endif %}
+    {% if perms.inventory.view_sales_report %}<a href="{% url 'web-report' 'sales' %}">Sales report</a>{% endif %}
+    {% if perms.inventory.view_procurement_report %}<a href="{% url 'web-report' 'procurement' %}">Procurement report</a>{% endif %}
+    {% if perms.inventory.view_inventory_valuation %}<a href="{% url 'web-report' 'valuation' %}">Valuation report</a>{% endif %}
     {% if perms.inventory.receive_procurement %}<a href="{% url 'web-post' 'PROCUREMENT' %}">Receive goods</a>{% endif %}
     {% if perms.inventory.record_sale %}<a href="{% url 'web-post' 'SALE' %}">Record sale</a>{% endif %}
     {% if perms.inventory.record_opening_balance %}<a href="{% url 'web-post' 'OPENING_BALANCE' %}">Opening balance</a>{% endif %}

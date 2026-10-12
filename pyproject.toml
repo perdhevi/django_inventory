@@ -7,5 +7,6 @@ dependencies = [
     "djangorestframework>=3.16",
     "djangorestframework-simplejwt>=5.5.1",
     "djangorestframework-stubs>=3.18.1",
+    "drf-spectacular>=0.30.0",
     "psycopg[binary]>=3.3.6",
 ]

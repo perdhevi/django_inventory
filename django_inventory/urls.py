@@ -17,6 +17,9 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from django.contrib.auth import views as auth_views
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from rest_framework.permissions import IsAdminUser
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("accounts.urls")),
@@ -27,4 +30,7 @@ urlpatterns = [
     path("accounts/password-change/", auth_views.PasswordChangeView.as_view(), name="password_change"),
     path("accounts/password-change/done/", auth_views.PasswordChangeDoneView.as_view(), name="password_change_done"),
     path("", include("inventory.web_urls")),
+
+    path("api/schema/", SpectacularAPIView.as_view(permission_classes=[IsAdminUser]), name="schema"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema", permission_classes=[IsAdminUser]), name="api-docs"),
 ]

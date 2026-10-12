@@ -49,7 +49,8 @@ class BrowserWorkflowTests(TestCase):
         self.client.force_login(self.admin)
         response = self.client.post(reverse("web-product-edit", args=[self.product.pk]), {
             "sku": "WEB-1", "name": "Updated", "category": self.product.category_id,
-            "price": "40.00", "is_active": "on", "stock_quantity": 999, "inventory_value": "999"
+            "price": "40.00", "is_active": "on", "stock_quantity": 999, "inventory_value": "999",
+            "reorder_level": 0
         })
         self.assertEqual(response.status_code, 302)
         self.product.refresh_from_db()

@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>{{ report.kind|title }} report</h1><p>Currency: {{ report.currency }} · Rows: {{ report.count }}</p>
+<p>Report timezone: {{ report.timezone }}. Date filters use this timezone.</p>
+<form method="get">
+{% if report.kind == 'stock' or report.kind == 'valuation' %}
+<label for="q">SKU/name</label><input id="q" name="q" value="{{ request.GET.q }}">
+{% else %}
+<label for="start">From</label><input type="date" id="start" name="start" value="{{ request.GET.start }}">
+<label for="end">Through</label><input type="date" id="end" name="end" value="{{ request.GET.end }}">
+<label for="product">Product ID</label><input id="product" name="product" value="{{ request.GET.product }}">
+{% endif %}<button>Filter</button></form>
+<dl>{% for key, value in report.totals.items %}<dt>{{ key }}</dt><dd>{{ value }}</dd>{% endfor %}</dl>
+{% if perms.inventory.export_reports %}<a href="{% url 'web-report-csv' report.kind %}?{{ query }}">Export CSV</a>{% endif %}
+<div class="cards">{% for row in report.rows %}<article><dl>
+{% for key, value in row.items %}<dt>{{ key }}</dt><dd>{{ value }}</dd>{% endfor %}
+</dl></article>{% empty %}<p>No matching records.</p>{% endfor %}</div>
+<p>Page {{ report.page }} of {{ report.pages }}</p>
+{% if report.page > 1 %}<a href="?{{ query }}&amp;page={{ report.page|add:'-1' }}">Previous</a>{% endif %}
+{% if report.page < report.pages %}<a href="?{{ query }}&amp;page={{ report.page|add:'1' }}">Next</a>{% endif %}
+{% endblock %}

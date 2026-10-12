@@ -30,6 +30,7 @@ class Product(models.Model):
         validators=[MinValueValidator(Decimal("0.00"))],
     )
     stock_quantity = models.PositiveIntegerField(default=0)
+    reorder_level = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -51,6 +52,7 @@ class Product(models.Model):
 
     class Meta:
         ordering = ["name", "id"]
+
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(price__gte=0),
@@ -91,6 +93,7 @@ class StockTransaction(models.Model):
 
     class Meta:
         ordering = ["-created_at", "-id"]
+        indexes = [models.Index(fields=["created_at", "id"], name="movement_date_idx")]
         constraints = [
             models.CheckConstraint(condition=models.Q(quantity__gt=0), name="movement_quantity_positive"),
         ]

@@ -2,6 +2,9 @@
 {% block content %}<h1>{{ product.name }}</h1>
 <p>{{ product.sku }} · {{ product.category }} · Stock: {{ product.stock_quantity }}</p>
 <p>{{ product.description }}</p><p>Selling price: {{ product.price }}</p>
+    {% if product.stock_quantity == 0 %}<p>Out of stock</p>
+    {% elif product.stock_quantity <= product.reorder_level %}<p>Low stock</p>{% endif %}
+
 {% if perms.inventory.view_inventory_valuation %}
   <p>Average cost: {{ product.average_unit_cost }} · Inventory value: {{ product.inventory_value }}</p>
 {% endif %}

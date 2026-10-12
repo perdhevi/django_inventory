@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1>Dashboard</h1><p>Units in stock: {{ totals.units|default_if_none:0 }}</p>
+<h1>Dashboard</h1>
+    <p>Units in stock: {{ totals.units|default_if_none:0 }}</p>
+    <p>Products at or below reorder level: {{ totals.low_stock_products }}</p>
 {% if perms.inventory.view_inventory_valuation %}<p>Inventory value ({{ currency }}): {{ totals.inventory_value }}</p>{% endif %}
 <h2>Recent movements</h2>{% include 'inventory/_movements.html' %}
 {% endblock %}

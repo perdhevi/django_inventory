@@ -3,13 +3,16 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db.models import Sum
+from django.db.models import Sum, F
 from django.db.models.deletion import ProtectedError
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, UpdateView
 from django.views.decorators.http import require_http_methods
+
+from django.core.paginator import Paginator
+from .queries import filter_products, filter_movements
 
 from .access import OPERATION_PERMISSIONS, require_operation, visible_movements
 from .forms import CategoryForm, ProductForm, StockOperationForm
@@ -26,6 +29,7 @@ def movement_data(request, queryset):
 @permission_required("inventory.view_product", raise_exception=True)
 def dashboard(request):
     totals = Product.objects.aggregate(units=Sum("stock_quantity"))
+    totals["low_stock_products"] = Product.objects.filter(stock_quantity__lte=F("reorder_level")).count()
     if request.user.has_perm("inventory.view_inventory_valuation"):
         totals["inventory_value"] = Product.objects.aggregate(value=Sum("inventory_value"))["value"] or 0
     rows = movement_data(request, visible_movements(request.user)[:5])
@@ -37,10 +41,20 @@ def dashboard(request):
 @login_required
 @permission_required("inventory.view_product", raise_exception=True)
 def products(request):
+    # return render(request, "inventory/products.html", {
+    #     "products": Product.objects.select_related("category").order_by("name", "id")
+    # })
+    try:
+        qs = filter_products(Product.objects.select_related("category"), request.GET)
+        page = Paginator(qs, 25).get_page(request.GET.get("page"))
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+        page = Paginator(Product.objects.none(), 25).get_page(1)
+    query = request.GET.copy()
+    query.pop("page", None)
     return render(request, "inventory/products.html", {
-        "products": Product.objects.select_related("category").order_by("name", "id")
+        "products": page, "page": page, "query": query.urlencode()
     })
-
 
 @login_required
 @permission_required("inventory.view_product", raise_exception=True)
@@ -136,11 +150,22 @@ def require_history(user):
 
 @login_required
 def movements(request):
+    # require_history(request.user)
+    # return render(request, "inventory/movements.html", {
+    #     "rows": movement_data(request, visible_movements(request.user)[:100])
+    # })
     require_history(request.user)
+    try:
+        qs = filter_movements(visible_movements(request.user), request.GET)
+        page = Paginator(qs, 25).get_page(request.GET.get("page"))
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+        page = Paginator(visible_movements(request.user).none(), 25).get_page(1)
+    query = request.GET.copy()
+    query.pop("page", None)
     return render(request, "inventory/movements.html", {
-        "rows": movement_data(request, visible_movements(request.user)[:100])
+        "rows": movement_data(request, page.object_list), "page": page, "query": query.urlencode()
     })
-
 
 @login_required
 def movement_detail(request, pk):
