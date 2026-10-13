@@ -8,5 +8,7 @@ dependencies = [
     "djangorestframework-simplejwt>=5.5.1",
     "djangorestframework-stubs>=3.18.1",
     "drf-spectacular>=0.30.0",
+    "gunicorn>=26.2.0",
     "psycopg[binary]>=3.3.6",
+    "whitenoise>=6.12.0",
 ]

@@ -1,0 +1,15 @@
+.git
+.venv
+.validation
+.idea
+.codex
+.agents
+**/__pycache__
+*.pyc
+.env*
+!.env.production.example
+db.sqlite3*
+sqlite-data.json
+reset-sequences.sql
+backups
+staticfiles

@@ -4,7 +4,24 @@ Continue from [Phase 6](06_reports_usability.md). Local authentication is suffic
 
 Use the package-name substitution from Phase 3. Commands below use `config.settings_production` and `config.wsgi`; this checkout needs `django_inventory.settings_production` and `django_inventory.wsgi` instead.
 
+## 0. Prepare the deployment tools
+
+Run all commands from the repository root. Start Docker Desktop and select Linux containers, then verify Docker is available:
+
+```powershell
+docker version
+docker compose version
+```
+
+`docker version` must show both client and server. If only the client appears, wait for Docker Desktop to finish starting before continuing.
+
+Use a fresh PowerShell terminal for the deployment commands. Configure the deployment variables in `.env.production` as described below. Django does not automatically read environment files; Compose passes the file's values into the application container.
+
 ## 1. Separate development and production configuration
+
+### 1.1 Install the runtime dependencies
+
+Run the command below on Windows to update the dependency files. Gunicorn runs inside the Linux image later; continue using Django's development server for ordinary Windows development.
 
 ```sh
 uv add gunicorn whitenoise
@@ -17,6 +34,10 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "local-learning-only-do-not-dep
 DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() == "true"
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
 ```
+
+### 1.2 Add production settings
+
+For this checkout, edit `django_inventory/settings.py` above and create `django_inventory/settings_production.py` below. Keep the existing PostgreSQL configuration, installed apps, templates, role settings, and JWT settings. The import below reuses them and overrides the deployment-specific values.
 
 Create `config/settings_production.py`:
 
@@ -93,6 +114,8 @@ The SMTP configuration prevents the development console backend from leaking int
 
 The two named warning exceptions document the deliberate initial HSTS scope. Do not silence other deployment warnings. After HTTPS is verified, increase the HSTS duration; enable subdomain coverage/preload only after assessing all affected hosts, then remove the corresponding exceptions.
 
+### 1.3 Create the environment template and local secret file
+
 Create `.env.production.example` with placeholders only:
 
 ```dotenv
@@ -130,6 +153,19 @@ sqlite-data.json
 reset-sequences.sql
 ```
 
+In PowerShell, copy the example only if `.env.production` does not already exist:
+
+```powershell
+if (-not (Test-Path -LiteralPath .env.production)) {
+    Copy-Item -LiteralPath .env.production.example -Destination .env.production
+}
+git check-ignore .env.production
+```
+
+Expect `.env.production` from the ignore check. Edit that file privately, set `DJANGO_SETTINGS_MODULE=django_inventory.settings_production`, replace both secret placeholders, and use the local hosts/origin in step 5 for the rehearsal. Keep the example as placeholders. Never paste real environment values into a commit or support log.
+
+Compose's `--env-file` supplies values for `${...}` substitution in the YAML; the web service's `env_file` passes values into its container. Both are needed here. Existing terminal environment variables can override Compose substitutions; use a fresh PowerShell terminal without the Phase 3 `POSTGRES_*` variables when operating this stack. Otherwise the database service and web container may receive different credentials. See [Compose variable interpolation](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/).
+
 ## 2. Add a minimal database health endpoint
 
 Create `inventory/health.py`:
@@ -152,6 +188,14 @@ def health(request):
 ```
 
 In `config/urls.py`, import `health` and add `path("health/", health, name="health")` before the browser include. This endpoint returns no users, financial data, credentials, or exception details. HTTPS/host protections still apply. Have the external monitor request `https://YOUR_HOST/health/` and alert on repeated 503/timeouts. Application errors go to stdout; do not log request bodies or authentication headers.
+
+For this checkout, the exact import is `from inventory.health import health` in `django_inventory/urls.py`. Insert the new route immediately before `path("", include("inventory.web_urls"))`; retain the existing API, authentication, and schema routes. Add the test file from step 7 now, so you can check the endpoint before building the container:
+
+```powershell
+uv run python manage.py test inventory.test_health
+```
+
+Expect two passing tests with development database variables loaded. The production HTTPS path is checked separately in step 5.
 
 ## 3. Build the Linux runtime
 
@@ -230,6 +274,16 @@ volumes:
 
 PostgreSQL is not exposed publicly; web listens on host loopback for the proxy. This Compose database initializes a local owner role on first boot. For a real production database, have its administrator provision a login/owner with **no superuser/CREATEDB** and inject its connection variables. The test/CI role is separate. Existing volume credentials are not changed by editing environment variables.
 
+Validate the production Compose file before continuing:
+
+```powershell
+docker compose --env-file .env.production -f compose.production.yml config --quiet
+```
+
+Expect exit code 0 and no output. Use `--quiet` because a full rendered configuration can print secrets. This validates configuration structure/substitution; it does not prove the database, image, or HTTPS connection works.
+
+Use only `compose.production.yml` at this step. Create and validate the HTTPS override in step 5 before starting the local rehearsal.
+
 ## 4. Add PostgreSQL-backed CI
 
 Create `.github/workflows/ci.yml` if hosting the repository on GitHub:
@@ -278,6 +332,8 @@ jobs:
 
 Use this checkout's settings package in CI and match Python/uv versions to the lockfile. The CI database is disposable and its role may create the test database. Pin third-party action commit SHAs in your release policy. A successful CI run must include the Phase 3 concurrency test on PostgreSQL, not a skip.
 
+The production-check step must use `DJANGO_SETTINGS_MODULE: django_inventory.settings_production` in this repository. Its key/password are disposable CI values, never production credentials. After pushing the workflow, inspect the GitHub Actions run: all check, migration-consistency, test, schema, and production-check steps must pass. Running these commands locally does not establish a successful remote workflow. This workflow validates Django; the image build and HTTPS/restore rehearsal remain separate release checks.
+
 ## 5. Rehearse release ordering and HTTPS
 
 ### Run Caddy locally in Docker
@@ -324,6 +380,14 @@ volumes:
 
 Compose connects these services on one network: Caddy reaches `web:8000`, and Django reaches `db:5432`. `127.0.0.1` inside Caddy would refer to Caddy itself. Your browser uses `https://localhost:8443`; the loopback app port is only for operator access. Commit the two configuration files, keeping private keys and env files out of Git.
 
+Now that `Caddyfile.local` and `compose.local-https.yml` exist, validate the combined configuration before starting services:
+
+```powershell
+docker compose --env-file .env.production -f compose.production.yml -f compose.local-https.yml config --quiet
+```
+
+Expect exit code 0 and no output. Resolve any missing-file or configuration errors before running the deployment commands below.
+
 With actual `.env.production` values and Docker available:
 
 ```sh
@@ -339,6 +403,21 @@ docker compose --env-file .env.production -f compose.production.yml up -d web
 
 `createsuperuser` is for a new database only. For a later release: stop incoming writes, take a backup, review the migration plan, apply compatible migrations, run required setup commands, start the new image, verify health/login/stock/report totals, then reopen writes. Do not rerun opening-stock reconciliation as an ordinary deployment step.
 
+Run the commands individually and stop if one fails. Their expected results are:
+
+| Command | Expected result / decision |
+| --- | --- |
+| `build web` | Locked dependencies install and the Linux image finishes building |
+| `up -d db` | Database starts; check its health before proceeding |
+| `migrate --plan` | Only the committed migrations expected for this database appear |
+| `migrate` | Pending migrations apply successfully |
+| `setup_roles` | The five business groups and permissions are provisioned |
+| `createsuperuser` | A local administrator is created interactively for a new database |
+| `check --deploy --fail-level WARNING` | No unsilenced deployment warnings/errors |
+| `up -d web` | Gunicorn starts after static collection; confirm with logs below |
+
+If reusing restored data, inspect existing users before deciding whether to create an administrator. `setup_roles` defines groups; it does not automatically assign normal users to them.
+
 Start Caddy after those migrations and setup commands:
 
 ```sh
@@ -347,16 +426,54 @@ docker compose --env-file .env.production -f compose.production.yml -f compose.l
 docker compose --env-file .env.production -f compose.production.yml -f compose.local-https.yml logs --tail 50 caddy web
 ```
 
-Expect `db` healthy and `web`/`caddy` running. Export Caddy's public root certificate to an ignored directory after its first start:
+Expect `db` healthy and `web`/`caddy` running. Create the ignored backup directory, then export Caddy's public root certificate after its first start. In PowerShell, run:
 
-```sh
+```powershell
+New-Item -ItemType Directory -Force -Path backups
 docker compose --env-file .env.production -f compose.production.yml -f compose.local-https.yml cp caddy:/data/caddy/pki/authorities/local/root.crt backups/caddy-local-root.crt
-curl --cacert backups/caddy-local-root.crt https://localhost:8443/health/
+curl.exe --cacert backups/caddy-local-root.crt https://localhost:8443/health/
 ```
 
-Create `backups` first (`New-Item -ItemType Directory -Force backups` in PowerShell, or `mkdir -p backups` in Bash). On Windows use `curl.exe` to avoid the older PowerShell alias. Expect HTTP 200 with `{"status":"ok"}`. This verifies the proxy, production app, and database together without disabling TLS verification.
+In Bash, use `mkdir -p backups` and `curl` instead. Expect HTTP 200 with `{"status":"ok"}`. This verifies the proxy, production app, and database together without disabling TLS verification.
+
+If Windows curl reports that the revocation status is unknown for Caddy's private local certificate, use this command for the local rehearsal. It keeps certificate authority and hostname verification enabled while disabling the revocation lookup for this request:
+
+```powershell
+curl.exe --cacert backups/caddy-local-root.crt --ssl-no-revoke https://localhost:8443/health/
+```
 
 Open **https://localhost:8443/accounts/login/** and sign in with the superuser you created. Caddy's internal CA is not automatically trusted by your host browser. For a warning-free browser rehearsal, import that public root certificate into your browser/OS trusted roots through its certificate settings and remove it when the rehearsal ends; only trust the CA you created. Keep Caddy's private keys inside its named volume. Check the dashboard and CSS, receive goods, record a sale, and compare history/report totals.
+
+### Verify a complete browser workflow
+
+Use a new rehearsal product so the expected balances are unambiguous:
+
+1. Confirm the login page and dashboard have their CSS with debug disabled. Check browser network requests for missing static assets.
+2. Create a product with selling price 40.00 and zero initial stock.
+3. Receive 10 units at acquisition cost 20.00, then 10 at 30.00. Expect stock 20, inventory value 500.000000, and average unit cost 25.000000.
+4. Sell 4 units at 40.00. Expect stock 16, inventory value 400.000000, revenue 160.00, COGS 100.000000, and gross profit 60.000000 for that sale.
+5. Attempt to sell 17 units. Expect validation failure and unchanged stock/value/history. Check transaction history and the sales/valuation reports against the successful movements.
+6. Assign a separate active user to Viewer in Admin. In a separate browser session, confirm permitted stock pages work and cost/profit data, posting actions, and forbidden exports remain blocked.
+7. Log out and confirm protected pages require login again. Check the session cookie has the Secure flag while logged in.
+
+Use the configured currency; these numbers are arithmetic examples, not a currency conversion. Record observed results, image identifier, and date in your runbook. These manual checks complement the automated suite.
+
+### Troubleshoot the rehearsal
+
+| Symptom | Check and correction |
+| --- | --- |
+| `KeyError` for a Django/PostgreSQL variable | Verify the variable exists in the container environment file and the settings package name is correct |
+| Compose reports a missing variable | Pass `--env-file .env.production` and replace required placeholders |
+| Database authentication fails | Check shell overrides and existing volume credentials; changing the file does not reset an initialized database password |
+| Browser gets HTTP 400 | Use a hostname in `DJANGO_ALLOWED_HOSTS`; entries contain no scheme or port |
+| Form submission gets CSRF 403 | Include the exact HTTPS origin, including `:8443` locally, in trusted origins; verify forwarded scheme and secure cookies |
+| Repeated HTTPS redirects | Check the proxy forwards the HTTPS scheme and Django trusts the configured header |
+| Caddy returns 502 | Check web logs for settings/import/static/database failures and confirm Gunicorn is listening on container port 8000 |
+| Health returns 503 | Check database availability/credentials; health deliberately hides exception details |
+| Certificate is untrusted | Use the exported public CA with `curl.exe --cacert`; use the documented trust process for the browser |
+| Dashboard CSS is missing | Check `collectstatic` output, WhiteNoise middleware order, static source directories, and manifest configuration |
+
+Do not erase a database volume to fix a configuration error. Inspect the service logs, correct the cause, and restart the affected service. Avoid sharing logs containing credentials or tokens.
 
 Stop the rehearsal with:
 
@@ -394,6 +511,29 @@ Restore to a separate database/server, never over the live inventory during a re
 
 Store encrypted backups outside the database host with a defined retention policy (for example daily backups retained 30 days) and restrict access: they contain identity/password hashes and financial records. A backup is only useful after a tested restore. Do not commit `.dump` files.
 
+### Back up the local Compose database without installing Windows client tools
+
+For the local rehearsal, use the PostgreSQL utilities already inside the database container. These commands save the custom archive in the container, then copy it out without binary shell redirection:
+
+```powershell
+New-Item -ItemType Directory -Force backups
+docker compose --env-file .env.production -f compose.production.yml exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom --file=/tmp/inventory-rehearsal.dump'
+docker compose --env-file .env.production -f compose.production.yml cp db:/tmp/inventory-rehearsal.dump backups/inventory-rehearsal.dump
+docker compose --env-file .env.production -f compose.production.yml exec -T db sh -c 'createdb -U "$POSTGRES_USER" inventory_restore'
+docker compose --env-file .env.production -f compose.production.yml exec -T db sh -c 'pg_restore -U "$POSTGRES_USER" --dbname=inventory_restore --no-owner --no-acl --exit-on-error /tmp/inventory-rehearsal.dump'
+```
+
+Use a new restore database name for each repeat; `createdb` should fail if that name already exists. The quoted shell variables above are expanded inside the Linux container. This example uses the disposable Compose owner role and local container authentication; follow your database administrator's credential/access process on a production host. PostgreSQL documents custom archives and `--file` in [pg_dump](https://www.postgresql.org/docs/17/app-pgdump.html).
+
+To test a fresh app connection to the restored database without redirecting the running web service:
+
+```powershell
+docker compose --env-file .env.production -f compose.production.yml run --rm -e POSTGRES_DB=inventory_restore web python manage.py showmigrations
+docker compose --env-file .env.production -f compose.production.yml run --rm -e POSTGRES_DB=inventory_restore web python manage.py shell
+```
+
+In that isolated shell, inspect Category/Product/StockTransaction counts and compare product quantities/values and sale snapshots with the pre-backup records. Counts alone do not prove financial consistency. Exit the shell afterward. Do not run the Django test suite against the restored dataset as a replacement for reconciliation; tests create their own test database.
+
 Schedule daily expired-refresh cleanup using the hosting scheduler:
 
 ```sh
@@ -401,6 +541,8 @@ docker compose --env-file .env.production -f compose.production.yml run --rm web
 ```
 
 Record the scheduler, backup destination, retention, monitoring contact, release/image identifier, and last restore rehearsal in your operations runbook. Do not send secrets/tokens in alerts.
+
+Also schedule `python manage.py clearsessions` for expired database sessions. Define an acceptable amount of data loss and recovery time, then choose backup frequency and rehearse restoration against those targets. A daily backup can lose up to roughly a day's writes; choose more frequent backups or PostgreSQL point-in-time recovery when that is unacceptable. Monitor backup job failures and external `/health/` failures, and verify alerts reach the responsible operator.
 
 ## 7. Add a focused health test and verify release readiness
 
@@ -436,6 +578,8 @@ Production verification runs inside the image with real deployment variables; or
 
 ## 8. Review changed files
 
+Review the diff before committing. Confirm production settings select PostgreSQL, runtime paths use `django_inventory`, migrations are committed, and real secrets/backups remain ignored. The guide's file list below uses the tutorial package name; use the equivalent paths in this checkout.
+
 ```text
 config/settings.py + settings_production.py
 config/urls.py                           health route
@@ -447,6 +591,17 @@ Caddyfile.local + compose.local-https.yml  local HTTPS rehearsal
 pyproject.toml + uv.lock
 ```
 
-Commit templates/configuration/code, not production secrets. Update README implementation status only after CI, staging workflow, provider round trip (if enabled), and restore rehearsal pass. Add a license before promising reuse terms. Return to [README](../README.md) and [roadmap](ROADMAP.md).
+Commit templates/configuration/code, not production secrets. Record the deployment commands and restore procedure in README after completing the rehearsal. Add a license before promising reuse terms. Return to [README](../README.md) and [roadmap](ROADMAP.md).
 
-See [the actual build validation](VALIDATION.md) for the tested versions, local runtime/restore results, and checks that still require external services.
+### Completion checklist
+
+- [ ] Run the application suite and health tests on PostgreSQL, including the concurrency test.
+- [ ] Production settings pass deployment checks and static files collect successfully.
+- [ ] Linux image starts as the configured non-root user.
+- [ ] Local HTTPS health, login, stock workflow, role restrictions, and reports pass.
+- [ ] Backup restores to a separate database and balances/sale snapshots reconcile.
+- [ ] GitHub CI passes remotely when that workflow is in use.
+- [ ] The public host has valid DNS/TLS, appropriate database privileges, login rate limiting, working alerts, and scheduled backups/cleanup before release.
+- [ ] The runbook records the release, restore result, recovery targets, and rollback procedure.
+
+Review the [Django deployment checklist](https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/).
